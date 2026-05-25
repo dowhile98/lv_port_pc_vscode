@@ -1,0 +1,25 @@
+#include "images.h"
+
+const ext_img_desc_t images[21] = {
+    { "logo", &img_logo },
+    { "internal_antena_icon", &img_internal_antena_icon },
+    { "external_antena_icon", &img_external_antena_icon },
+    { "satellite_disconnect_1", &img_satellite_disconnect_1 },
+    { "satellite_disconnect_2", &img_satellite_disconnect_2 },
+    { "satellite_online", &img_satellite_online },
+    { "battery_incon", &img_battery_incon },
+    { "battery_level_icon", &img_battery_level_icon },
+    { "wifi_connected_icon", &img_wifi_connected_icon },
+    { "wifi_disconnected_icon", &img_wifi_disconnected_icon },
+    { "lock_icon", &img_lock_icon },
+    { "unlock_icon", &img_unlock_icon },
+    { "up_button", &img_up_button },
+    { "down_button", &img_down_button },
+    { "back_button", &img_back_button },
+    { "enter_button", &img_enter_button },
+    { "up_button_press", &img_up_button_press },
+    { "down_button_press", &img_down_button_press },
+    { "gps_antenna_failed", &img_gps_antenna_failed },
+    { "background_1", &img_background_1 },
+    { "background_0", &img_background_0 },
+};

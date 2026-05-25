@@ -106,21 +106,12 @@
  * - LV_OS_MQX
  * - LV_OS_SDL2
  * - LV_OS_CUSTOM */
-#define LV_USE_OS   LV_OS_NONE
+#define LV_USE_OS   LV_OS_CUSTOM
 
 #if LV_USE_OS == LV_OS_CUSTOM
-    #define LV_OS_CUSTOM_INCLUDE <stdint.h>
-#endif
-#if LV_USE_OS == LV_OS_FREERTOS
-    /*
-     * Unblocking an RTOS task with a direct notification is 45% faster and uses less RAM
-     * than unblocking a task using an intermediary object such as a binary semaphore.
-     * RTOS task notifications can only be used when there is only one task that can be the recipient of the event.
-     */
-    #define LV_USE_FREERTOS_TASK_NOTIFY 1
-
-    /* Enable this to provide a custom implementation of lv_os_get_idle_percent. */
-    #define LV_OS_IDLE_PERCENT_CUSTOM 0
+    /* Bridge LVGL → FreeRTOS: tipos y primitivas propias del proyecto.
+     * Equivalente al lv_threadx_osal.h del firmware real, pero para FreeRTOS. */
+    #define LV_OS_CUSTOM_INCLUDE <infrastructure/osal/lv_freertos_osal.h>
 #endif
 
 /*========================
@@ -1095,7 +1086,7 @@
 
 /** Enable ThorVG (vector graphics library) from the src/libs folder.
  *  Requires LV_USE_VECTOR_GRAPHIC */
-#define LV_USE_THORVG_INTERNAL 1 
+#define LV_USE_THORVG_INTERNAL 1
 
 /** Enable ThorVG by assuming that its installed and linked to the project
  *  Requires LV_USE_VECTOR_GRAPHIC */

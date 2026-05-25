@@ -8,7 +8,7 @@ set(LVGL_PRO_PROJECT_DIR
     ""
     CACHE PATH "Path to LVGL Pro Project folder")
 
-option(USE_FREERTOS "Enable FreeRTOS" OFF) # Turn this on to enable FreeRTOS
+option(USE_FREERTOS "Enable FreeRTOS" ON) # Turn this on to enable FreeRTOS
 
 if(USE_FREERTOS)
     message(STATUS "FreeRTOS is enabled")
@@ -69,15 +69,57 @@ add_compile_definitions($<$<BOOL:${LV_USE_FFMPEG}>:LV_USE_FFMPEG=1>)
 add_subdirectory(lvgl)
 target_include_directories(lvgl PUBLIC ${PROJECT_SOURCE_DIR} ${SDL2_INCLUDE_DIRS})
 
-set(MAIN_SOURCES src/mouse_cursor_icon.c src/hal/hal.c)
+# Propagate FreeRTOS headers to the lvgl target when FreeRTOS is enabled.
+# lv_conf.h sets LV_USE_OS=LV_OS_CUSTOM with our lv_freertos_osal.h,
+# so LVGL needs FreeRTOS.h and our osal header at compile time.
+if(USE_FREERTOS)
+    target_include_directories(lvgl PUBLIC
+        ${PROJECT_SOURCE_DIR}/FreeRTOS/include
+        ${PROJECT_SOURCE_DIR}/FreeRTOS/portable/ThirdParty/GCC/Posix
+        ${PROJECT_SOURCE_DIR}/config
+        ${PROJECT_SOURCE_DIR}/src/include
+    )
+endif()
+
+# Allow #include "hal/hal.h", "presentation/ui/ui.h", etc. from any translation unit
+include_directories(${PROJECT_SOURCE_DIR}/src)
+include_directories(${PROJECT_SOURCE_DIR}/src/src)
+include_directories(${PROJECT_SOURCE_DIR}/src/include/pc_overrides)   # PC overrides (e.g., lwprintf_opts.h)
+include_directories(${PROJECT_SOURCE_DIR}/src/include)
+include_directories(${PROJECT_SOURCE_DIR}/src/include/interfaces)
+include_directories(${PROJECT_SOURCE_DIR}/src/hal)
+include_directories(${PROJECT_SOURCE_DIR}/src/include/infrastructure)
+include_directories(${PROJECT_SOURCE_DIR}/src/include/infrastructure/config)
+include_directories(${PROJECT_SOURCE_DIR}/src/src/presentation)
+include_directories(${PROJECT_SOURCE_DIR}/src/Third_Party/lwprintf/src/include/lwprintf)
+include_directories(${PROJECT_SOURCE_DIR}/src/Third_Party/lwprintf/src/include)
+include_directories(${PROJECT_SOURCE_DIR}/src/Third_Party/lwbtn/src/include)
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# BSP ISOLATION GUARD
+# Files under src/bsp/stm32u5/ contain STM32U5 HAL hardware code. They MUST NOT
+# be compiled for the PC simulator. Only the neutral HAL wrappers in src/hal/
+# (bsp_ui_hw_init_pc.c, ui_port_disp_pc.c) are compiled as PC replacements.
+#
+# If you add new source files, ensure they do NOT match the BSP stm32u5 tree.
+# The includes below provide access to clean BSP *headers* (no stm32u5xx_hal.h)
+# that declare shared function signatures (e.g. BSP_UI_HW_Init).
+# ═══════════════════════════════════════════════════════════════════════════════
+
+
+# Collect all application sources from src/CMakeLists.txt
+# (exports APP_SOURCES, APP_FREERTOS_SOURCES, APP_BARE_SOURCES)
+add_subdirectory(src)
+
+set(MAIN_SOURCES ${APP_SOURCES})
 set(MAIN_LIBS lvgl lvgl::examples lvgl::demos lvgl::thorvg ${SDL2_LIBRARIES})
 
 # Create the main executable, depending on the FreeRTOS option
 if(USE_FREERTOS)
-    list(APPEND MAIN_SOURCES src/freertos_main.c src/freertos/freertos_posix_port.c ${FREERTOS_SOURCES})
+    list(APPEND MAIN_SOURCES ${APP_FREERTOS_SOURCES} ${FREERTOS_SOURCES})
     list(APPEND MAIN_LIBS freertos_config freertos_kernel)
 else()
-    list(APPEND MAIN_SOURCES src/main.c)
+    list(APPEND MAIN_SOURCES ${APP_BARE_SOURCES})
 endif()
 
 
@@ -141,9 +183,31 @@ if(LVGL_PRO_PROJECT_DIR)
   endif()
 endif()
 
-add_executable(main ${MAIN_SOURCES})
+add_executable(main ${MAIN_SOURCES}
+  src/hal/bsp_ui_hw_init_pc.c
+  src/hal/ui_port_disp_pc.c
+  src/hal/pc_event_log_storage.h
+  src/hal/pc_event_log_storage.c)
 target_compile_definitions(main PRIVATE LV_CONF_INCLUDE_SIMPLE)
 target_link_libraries(main ${MAIN_LIBS})
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# BSP ISOLATION GUARD — ensure no STM32U5 hardware source is compiled for PC
+# ═══════════════════════════════════════════════════════════════════════════════
+function(assert_no_stm32_sources target)
+  get_target_property(_srcs ${target} SOURCES)
+  foreach(_src ${_srcs})
+    if(_src MATCHES "bsp/stm32u5" OR _src MATCHES "bsp/components")
+      message(FATAL_ERROR
+        "\n  *** BSP ISOLATION VIOLATION ***\n"
+        "  Target '${target}' contains BSP hardware source:\n"
+        "    ${_src}\n"
+        "  STM32U5 / component BSP sources MUST NOT be compiled for the PC simulator.\n"
+        "  Remove it from MAIN_SOURCES (or APP_SOURCES) and use a PC mock/stub instead.\n")
+    endif()
+  endforeach()
+endfunction()
+assert_no_stm32_sources(main)
 
 # On Windows, GUI applications do not show a console by default,
 # which hides log output. This ensures a console is available for logging.

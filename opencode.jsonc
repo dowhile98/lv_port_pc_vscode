@@ -1,0 +1,34 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "mcp": {
+    "sequential-thinking": {
+      "type": "local",
+      "command": ["npx", "-y", "@modelcontextprotocol/server-sequential-thinking"]
+    },
+    "memory": {
+      "type": "local",
+      "command": ["npx", "-y", "@modelcontextprotocol/server-memory"]
+    },
+    "pdf-reader": {
+      "type": "local",
+      "command": ["npx", "-y", "@sylphx/pdf-reader-mcp", "--allow-dir=/home/tecna-smart-lab/Documentos/Libros"]
+    },
+    "excalidraw": {
+      "type": "remote",
+      "url": "https://mcp.excalidraw.com"
+    },
+    "drawio": {
+      "type": "remote",
+      "url": "https://mcp.draw.io/mcp"
+    },
+    "gemini-ocr-mcp": {
+      "type": "local",
+      "command": ["uv", "--directory", "/home/tecna-smart-lab/GitHub/gemini-ocr-mcp", "run", "gemini-ocr-mcp.py"],
+      "env": {
+        "GEMINI_MODEL": "gemini-3-flash-preview",
+        "GEMINI_API_KEY": "AIzaSyCvutqKkb-hhrynJEssK34Z_fR1tgjvh5g"
+      }
+    }
+  }
+}
+
